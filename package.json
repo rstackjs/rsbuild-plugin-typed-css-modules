@@ -1,6 +1,6 @@
 {
   "name": "@rsbuild/plugin-typed-css-modules",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "repository": "https://github.com/rstackjs/rsbuild-plugin-typed-css-modules",
   "license": "MIT",
   "type": "module",
