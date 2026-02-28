@@ -32,6 +32,7 @@ export const pluginTypedCSSModules = (
             CHAIN_ID.RULE.LESS,
             CHAIN_ID.RULE.STYLUS,
           ];
+          const isV1 = api.context.version.startsWith('1.');
 
           for (const ruleId of ruleIds) {
             let index = 1;
@@ -46,7 +47,9 @@ export const pluginTypedCSSModules = (
               continue;
             }
 
-            const rule = chain.module.rule(ruleId);
+            const rule = isV1
+              ? chain.module.rule(ruleId)
+              : chain.module.rule(ruleId).oneOf(ruleId.split('-')[0]);
 
             if (!rule.uses.has(CHAIN_ID.USE.CSS)) {
               continue;
