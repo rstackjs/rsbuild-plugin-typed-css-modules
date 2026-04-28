@@ -22,7 +22,7 @@ Add plugin to your `rsbuild.config.ts`:
 
 ```ts
 // rsbuild.config.ts
-import { pluginTypedCSSModules } from "@rsbuild/plugin-typed-css-modules";
+import { pluginTypedCSSModules } from '@rsbuild/plugin-typed-css-modules';
 
 export default {
   plugins: [pluginTypedCSSModules()],
@@ -36,7 +36,7 @@ By adding the Typed CSS Modules plugin, Rsbuild will generate TypeScript declara
 For example, create two files named `src/index.ts` and `src/index.module.css`:
 
 ```tsx title="src/index.ts"
-import styles from "./index.module.css";
+import styles from './index.module.css';
 
 console.log(styles.pageHeader);
 ```
@@ -51,7 +51,7 @@ After building, Rsbuild will generate a `src/index.module.css.d.ts` type declara
 
 ```ts title="src/index.module.css.d.ts"
 interface CssExports {
-  "page-header": string;
+  'page-header': string;
   pageHeader: string;
 }
 declare const cssExports: CssExports;
