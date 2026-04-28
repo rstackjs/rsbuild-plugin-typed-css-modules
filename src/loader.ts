@@ -15,6 +15,17 @@ import type { CSSModules, Rspack } from '@rsbuild/core';
 import LineDiff from 'line-diff';
 import type { PluginOptions } from './index.js';
 
+type LoaderCallback = ReturnType<Rspack.LoaderContext['async']>;
+type LoaderCallbackRest = [
+  sourceMap?: Parameters<LoaderCallback>[2],
+  additionalData?: Parameters<LoaderCallback>[3],
+];
+type ReadFileHandler = (
+  err: NodeJS.ErrnoException | null,
+  data: string,
+) => void;
+type WriteFileHandler = (err: NodeJS.ErrnoException | null) => void;
+
 export type CssLoaderModules =
   | boolean
   | string
@@ -144,21 +155,22 @@ const compareText = (contentA: string, contentB: string) => {
 
 const validModes = ['emit', 'verify'];
 
-const isFileNotFound = (err?: { code: string }) => err && err.code === 'ENOENT';
+const isFileNotFound = (err?: NodeJS.ErrnoException | null) =>
+  err?.code === 'ENOENT';
 
 const makeDoneHandlers = (
-  callback: (...args: any[]) => void,
+  callback: LoaderCallback,
   content: string,
-  rest: any[],
+  rest: LoaderCallbackRest,
 ) => ({
   failed: (e: Error) => callback(e),
   success: () => callback(null, content, ...rest),
 });
 
 const makeFileHandlers = (filename: string) => ({
-  read: (handler: (...args: any[]) => void) =>
+  read: (handler: ReadFileHandler) =>
     fs.readFile(filename, { encoding: 'utf-8' }, handler),
-  write: (content: string, handler: (...args: any[]) => void) =>
+  write: (content: string, handler: WriteFileHandler) =>
     fs.writeFile(filename, content, { encoding: 'utf-8' }, handler),
 });
 
@@ -219,7 +231,7 @@ export default function (
     } & PluginOptions
   >,
   content: string,
-  ...rest: any[]
+  ...rest: LoaderCallbackRest
 ): void {
   const { failed, success } = makeDoneHandlers(this.async(), content, rest);
 
