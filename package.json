@@ -1,7 +1,11 @@
 {
   "name": "@rsbuild/plugin-typed-css-modules",
   "version": "1.2.4",
+  "homepage": "https://github.com/rstackjs/rsbuild-plugin-typed-css-modules#readme",
   "repository": "https://github.com/rstackjs/rsbuild-plugin-typed-css-modules",
+  "bugs": {
+    "url": "https://github.com/rstackjs/rsbuild-plugin-typed-css-modules/issues"
+  },
   "license": "MIT",
   "type": "module",
   "exports": {
