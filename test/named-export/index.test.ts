@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { expect, test } from '@playwright/test';
+import { expect, test } from '@rstest/playwright';
 import { createRsbuild } from '@rsbuild/core';
 import { pluginLess } from '@rsbuild/plugin-less';
 import { pluginSass } from '@rsbuild/plugin-sass';
