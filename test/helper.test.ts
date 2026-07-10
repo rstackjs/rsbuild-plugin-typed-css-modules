@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from '@rstest/playwright';
 import { type CssLoaderModules, isCSSModules } from '../src/loader';
 
 test('check isCSSModules', () => {
