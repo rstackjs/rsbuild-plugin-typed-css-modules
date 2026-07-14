@@ -33,7 +33,7 @@
   },
   "devDependencies": {
     "@rsbuild/core": "^2.1.2",
-    "@rsbuild/plugin-less": "^1.6.4",
+    "@rsbuild/plugin-less": "^2.0.1",
     "@rsbuild/plugin-sass": "^1.5.3",
     "@rsbuild/plugin-stylus": "^2.0.1",
     "@rsbuild/plugin-type-check": "^1.5.0",
