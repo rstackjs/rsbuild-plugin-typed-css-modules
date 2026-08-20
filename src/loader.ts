@@ -27,9 +27,7 @@ type ReadFileHandler = (
 type WriteFileHandler = (err: NodeJS.ErrnoException | null) => void;
 
 export type CssLoaderModules =
-  | boolean
-  | string
-  | Required<Pick<CSSModules, 'auto' | 'namedExport'>>;
+  boolean | string | Required<Pick<CSSModules, 'auto' | 'namedExport'>>;
 
 const NODE_MODULES_REGEX: RegExp = /[\\/]node_modules[\\/]/;
 const isInNodeModules = (path: string) => NODE_MODULES_REGEX.test(path);
