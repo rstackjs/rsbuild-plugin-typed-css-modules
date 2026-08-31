@@ -32,20 +32,20 @@
     "pre-commit": "pnpm run lint:write"
   },
   "devDependencies": {
-    "@rsbuild/core": "^2.1.13",
+    "@rsbuild/core": "^2.2.1",
     "@rsbuild/plugin-less": "^2.0.1",
     "@rsbuild/plugin-sass": "^2.0.1",
     "@rsbuild/plugin-stylus": "^2.0.1",
     "@rsbuild/plugin-type-check": "^1.6.0",
     "@rslib/core": "^0.23.2",
-    "@rslint/core": "^0.8.1",
-    "@rstest/core": "^0.11.8",
-    "@rstest/playwright": "^0.11.8",
+    "@rslint/core": "^0.9.0",
+    "@rstest/core": "^0.11.11",
+    "@rstest/playwright": "^0.11.11",
     "@types/node": "^24.13.3",
     "line-diff": "2.1.2",
     "playwright": "^1.62.1",
     "prettier": "^3.9.6",
-    "simple-git-hooks": "^2.13.1",
+    "simple-git-hooks": "^2.14.0",
     "typescript": "^7.0.2"
   },
   "peerDependencies": {
@@ -56,7 +56,7 @@
       "optional": true
     }
   },
-  "packageManager": "pnpm@11.21.0",
+  "packageManager": "pnpm@11.24.0",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
