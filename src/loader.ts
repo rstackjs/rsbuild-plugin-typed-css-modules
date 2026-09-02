@@ -13,7 +13,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { CSSModules, Rspack } from '@rsbuild/core';
 import LineDiff from 'line-diff';
-import type { PluginOptions } from './index.js';
+import type { PluginOptions } from './index.ts';
 
 type LoaderCallback = ReturnType<Rspack.LoaderContext['async']>;
 type LoaderCallbackRest = [

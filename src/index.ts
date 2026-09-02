@@ -4,6 +4,9 @@ import type { CSSLoaderOptions, RsbuildPlugin } from '@rsbuild/core';
 
 export const PLUGIN_TYPED_CSS_MODULES_NAME = 'rsbuild:typed-css-modules';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const loaderFilename = import.meta.url.endsWith('.ts')
+  ? './loader.ts'
+  : './loader.cjs';
 
 export type PluginOptions = {
   /**
@@ -69,7 +72,7 @@ export const pluginTypedCSSModules = (
 
             rule
               .use('css-modules-typescript')
-              .loader(path.resolve(__dirname, './loader.cjs'))
+              .loader(path.resolve(__dirname, loaderFilename))
               .options({
                 modules: cssLoaderOptions.modules,
                 looseTyping: options.looseTyping,
