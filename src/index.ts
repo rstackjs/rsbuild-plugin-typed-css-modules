@@ -58,12 +58,12 @@ export const pluginTypedCSSModules = (
               continue;
             }
 
-            const cssLoaderOptions: CSSLoaderOptions = rule
-              .use(CHAIN_ID.USE.CSS)
+            const cssLoaderOptions = rule
+              .use<CSSLoaderOptions>(CHAIN_ID.USE.CSS)
               .get('options');
 
             if (
-              !cssLoaderOptions.modules ||
+              !cssLoaderOptions?.modules ||
               (typeof cssLoaderOptions.modules === 'object' &&
                 cssLoaderOptions.modules.auto === false)
             ) {
