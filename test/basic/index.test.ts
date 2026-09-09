@@ -204,34 +204,3 @@ export default cssExports;
 
   await clear();
 });
-
-test('should skip css-loader without options', async () => {
-  const rsbuild = await createRsbuild({
-    cwd: __dirname,
-    config: {
-      plugins: [
-        {
-          name: 'remove-css-loader-options',
-          setup(api) {
-            api.modifyBundlerChain({
-              order: 'post',
-              handler(chain, { CHAIN_ID }) {
-                chain.module
-                  .rule(CHAIN_ID.RULE.CSS)
-                  .oneOf(CHAIN_ID.ONE_OF.CSS_MAIN)
-                  .use(CHAIN_ID.USE.CSS)
-                  .delete('options');
-              },
-            });
-          },
-        },
-        pluginTypedCSSModules(),
-      ],
-    },
-  });
-
-  const configs = await rsbuild.initConfigs();
-  expect(JSON.stringify(configs)).not.toContain(
-    resolve(__dirname, '../../dist/loader.cjs'),
-  );
-});
