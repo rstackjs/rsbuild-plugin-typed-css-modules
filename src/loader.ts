@@ -11,7 +11,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import type { CSSModules, Rspack } from '@rsbuild/core';
+import type { CSSLoaderOptions, CSSModules, Rspack } from '@rsbuild/core';
 import LineDiff from 'line-diff';
 import type { PluginOptions } from './index.ts';
 
@@ -48,7 +48,7 @@ export const isCSSModules = ({
   resourcePath: string;
   resourceQuery: string;
   resourceFragment: string;
-  modules: CssLoaderModules;
+  modules: NonNullable<CSSLoaderOptions['modules']>;
 }): boolean => {
   if (typeof modules === 'boolean') {
     return modules;
@@ -67,7 +67,7 @@ export const isCSSModules = ({
     return auto && CSS_MODULES_REGEX.test(resourcePath);
   }
   if (auto instanceof RegExp) {
-    return auto.test(resourcePath);
+    return new RegExp(auto.source, auto.flags).test(resourcePath);
   }
   if (typeof auto === 'function') {
     return auto(resourcePath, resourceQuery, resourceFragment);

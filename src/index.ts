@@ -1,6 +1,8 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { CSSLoaderOptions, RsbuildPlugin } from '@rsbuild/core';
+import type { CSSLoaderOptions, RsbuildPlugin, Rspack } from '@rsbuild/core';
+import { createDeclarationCleaner, matchesCondition } from './clean.js';
+import { isCSSModules } from './loader.js';
 
 export const PLUGIN_TYPED_CSS_MODULES_NAME = 'rsbuild:typed-css-modules';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -9,6 +11,12 @@ const loaderFilename = import.meta.url.endsWith('.ts')
   : './loader.cjs';
 
 export type PluginOptions = {
+  /**
+   * Remove generated declarations whose source files no longer exist before
+   * builds and when watched source files are deleted.
+   * @default false
+   */
+  clean?: boolean;
   /**
    * When enabled, the generated type definition will include an index signature (`[key: string]: string`).
    * This allows you to reference any class name without TypeScript errors, while still keeping autocomplete
@@ -25,6 +33,43 @@ export const pluginTypedCSSModules = (
   name: PLUGIN_TYPED_CSS_MODULES_NAME,
 
   setup(api) {
+    const moduleMatchers: ((filename: string) => boolean)[] = [];
+    if (options.clean) {
+      const outputPaths = new Set<string>();
+      api.modifyRspackConfig((config) => {
+        if (config.output?.path) {
+          outputPaths.add(config.output.path);
+        }
+        config.plugins ||= [];
+        config.plugins.push({
+          apply(compiler: Rspack.Compiler) {
+            const cleaner = createDeclarationCleaner({
+              root: api.context.rootPath,
+              outputPaths: [api.context.distPath, ...outputPaths],
+              isModule: (filename) =>
+                moduleMatchers.some((matches) => matches(filename)),
+            });
+            compiler.hooks.beforeRun.tapPromise(
+              PLUGIN_TYPED_CSS_MODULES_NAME,
+              cleaner.scan,
+            );
+            let initialWatch = true;
+            compiler.hooks.watchRun.tapPromise(
+              PLUGIN_TYPED_CSS_MODULES_NAME,
+              async () => {
+                if (initialWatch) {
+                  await cleaner.scan();
+                  initialWatch = false;
+                } else {
+                  await cleaner.removeDeleted(compiler.removedFiles ?? []);
+                }
+              },
+            );
+          },
+        });
+      });
+    }
+
     api.modifyBundlerChain({
       order: 'post',
       handler: async (chain, { target, CHAIN_ID }) => {
@@ -68,6 +113,36 @@ export const pluginTypedCSSModules = (
                 cssLoaderOptions.modules.auto === false)
             ) {
               continue;
+            }
+
+            if (options.clean) {
+              const parent = chain.module.rule(ruleId);
+              const conditions = [parent, rule].map((item) => ({
+                test: item.get('test'),
+                include: item.include.values().length
+                  ? item.include.values()
+                  : undefined,
+                exclude: item.exclude.values().length
+                  ? item.exclude.values()
+                  : undefined,
+              }));
+              const modules = cssLoaderOptions.modules;
+              moduleMatchers.push(
+                (resourcePath) =>
+                  conditions.every(
+                    ({ test, include, exclude }) =>
+                      matchesCondition(resourcePath, test) &&
+                      matchesCondition(resourcePath, include) &&
+                      (exclude === undefined ||
+                        !matchesCondition(resourcePath, exclude)),
+                  ) &&
+                  isCSSModules({
+                    resourcePath,
+                    resourceQuery: '',
+                    resourceFragment: '',
+                    modules,
+                  }),
+              );
             }
 
             rule
