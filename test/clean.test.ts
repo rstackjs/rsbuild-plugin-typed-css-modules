@@ -14,6 +14,8 @@ for (const clean of [undefined, true]) {
     const source = path.join(root, 'remove.module.css');
     const keptSource = path.join(root, 'keep.module.css');
     const handwritten = path.join(root, 'handwritten.module.css.d.ts');
+    const outputPath = path.join(root, 'custom-output');
+    const outputDeclaration = path.join(outputPath, 'old.module.css.d.ts');
     try {
       await fs.promises.writeFile(
         entry,
@@ -30,11 +32,18 @@ for (const clean of [undefined, true]) {
         config: {
           plugins: [pluginTypedCSSModules({ clean })],
           source: { entry: { index: './index.js' } },
+          output: { cleanDistPath: false },
+          tools: {
+            rspack(config) {
+              config.output!.path = outputPath;
+            },
+          },
         },
       });
       await rsbuild.build();
       expect(fs.existsSync(`${source}.d.ts`)).toBe(true);
       expect(fs.existsSync(`${keptSource}.d.ts`)).toBe(true);
+      await fs.promises.copyFile(`${source}.d.ts`, outputDeclaration);
 
       await fs.promises.unlink(source);
       await fs.promises.writeFile(entry, "import './keep.module.css';");
@@ -44,6 +53,7 @@ for (const clean of [undefined, true]) {
       );
       expect(fs.existsSync(`${source}.d.ts`)).toBe(!clean);
       expect(fs.existsSync(`${keptSource}.d.ts`)).toBe(true);
+      expect(fs.existsSync(outputDeclaration)).toBe(true);
     } finally {
       await fs.promises.rm(root, { recursive: true, force: true });
     }

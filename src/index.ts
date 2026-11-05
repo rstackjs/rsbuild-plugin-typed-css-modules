@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { CSSLoaderOptions, RsbuildPlugin, Rspack } from '@rsbuild/core';
+import type { CSSLoaderOptions, RsbuildPlugin } from '@rsbuild/core';
 import { createDeclarationCleaner } from './clean.js';
 
 export const PLUGIN_TYPED_CSS_MODULES_NAME = 'rsbuild:typed-css-modules';
@@ -33,36 +33,33 @@ export const pluginTypedCSSModules = (
 
   setup(api) {
     if (options.clean) {
-      const outputPaths = new Set<string>();
-      api.modifyRspackConfig((config) => {
-        if (config.output?.path) {
-          outputPaths.add(config.output.path);
+      api.onAfterCreateCompiler(({ compiler }) => {
+        const compilers =
+          'compilers' in compiler ? compiler.compilers : [compiler];
+        // Collect every environment's output after tools.rspack has been applied.
+        const outputPaths = compilers.map((item) => item.outputPath);
+        for (const item of compilers) {
+          const cleaner = createDeclarationCleaner({
+            root: api.context.rootPath,
+            outputPaths: [api.context.distPath, ...outputPaths],
+          });
+          item.hooks.beforeRun.tapPromise(
+            PLUGIN_TYPED_CSS_MODULES_NAME,
+            cleaner.scan,
+          );
+          let initialWatch = true;
+          item.hooks.watchRun.tapPromise(
+            PLUGIN_TYPED_CSS_MODULES_NAME,
+            async () => {
+              if (initialWatch) {
+                await cleaner.scan();
+                initialWatch = false;
+              } else {
+                await cleaner.removeDeleted(item.removedFiles ?? []);
+              }
+            },
+          );
         }
-        config.plugins ||= [];
-        config.plugins.push({
-          apply(compiler: Rspack.Compiler) {
-            const cleaner = createDeclarationCleaner({
-              root: api.context.rootPath,
-              outputPaths: [api.context.distPath, ...outputPaths],
-            });
-            compiler.hooks.beforeRun.tapPromise(
-              PLUGIN_TYPED_CSS_MODULES_NAME,
-              cleaner.scan,
-            );
-            let initialWatch = true;
-            compiler.hooks.watchRun.tapPromise(
-              PLUGIN_TYPED_CSS_MODULES_NAME,
-              async () => {
-                if (initialWatch) {
-                  await cleaner.scan();
-                  initialWatch = false;
-                } else {
-                  await cleaner.removeDeleted(compiler.removedFiles ?? []);
-                }
-              },
-            );
-          },
-        });
       });
     }
 
