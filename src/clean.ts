@@ -1,7 +1,7 @@
 import { type Dirent, realpathSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { Rspack } from '@rsbuild/core';
+import { DECLARATION_HEADER } from './constants.js';
 
 const STYLE_REGEX = /\.(css|scss|sass|less|styl|stylus)$/i;
 const isMissing = (error: unknown) =>
@@ -10,14 +10,9 @@ const isMissing = (error: unknown) =>
 type CleanOptions = {
   root: string;
   outputPaths: string[];
-  isModule: (filename: string) => boolean;
 };
 
-export function createDeclarationCleaner({
-  root,
-  outputPaths,
-  isModule,
-}: CleanOptions) {
+export function createDeclarationCleaner({ root, outputPaths }: CleanOptions) {
   const originalRoot = path.resolve(root);
   root = realpathSync(originalRoot);
   // Rspack reports real paths (e.g. /private/var on macOS), while cwd may
@@ -51,7 +46,7 @@ export function createDeclarationCleaner({
   }
 
   async function remove(source: string) {
-    if (!isInScope(source) || !STYLE_REGEX.test(source) || !isModule(source)) {
+    if (!isInScope(source) || !STYLE_REGEX.test(source)) {
       return;
     }
     try {
@@ -64,7 +59,11 @@ export function createDeclarationCleaner({
     }
     const declaration = `${source}.d.ts`;
     try {
-      if ((await fs.lstat(declaration)).isFile()) {
+      if (!(await fs.lstat(declaration)).isFile()) {
+        return;
+      }
+      const content = await fs.readFile(declaration, 'utf8');
+      if (content.replace(/\r\n/g, '\n').startsWith(DECLARATION_HEADER)) {
         await fs.unlink(declaration);
       }
     } catch (error) {
@@ -128,25 +127,4 @@ export function createDeclarationCleaner({
       }
     },
   };
-}
-
-// Use the same resource conditions as the stylesheet rule that installs the loader.
-export function matchesCondition(
-  filename: string,
-  condition?: Rspack.RuleSetCondition,
-): boolean {
-  if (condition === undefined) return true;
-  if (typeof condition === 'string') return filename.startsWith(condition);
-  if (typeof condition === 'function') return condition(filename);
-  if (condition instanceof RegExp)
-    return new RegExp(condition.source, condition.flags).test(filename);
-  if (Array.isArray(condition))
-    return condition.some((item) => matchesCondition(filename, item));
-  return (
-    (!condition.and ||
-      condition.and.every((item) => matchesCondition(filename, item))) &&
-    (!condition.or ||
-      condition.or.some((item) => matchesCondition(filename, item))) &&
-    (!condition.not || !matchesCondition(filename, condition.not))
-  );
 }

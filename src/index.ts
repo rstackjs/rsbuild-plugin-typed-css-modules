@@ -1,8 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { CSSLoaderOptions, RsbuildPlugin, Rspack } from '@rsbuild/core';
-import { createDeclarationCleaner, matchesCondition } from './clean.js';
-import { isCSSModules } from './loader.js';
+import { createDeclarationCleaner } from './clean.js';
 
 export const PLUGIN_TYPED_CSS_MODULES_NAME = 'rsbuild:typed-css-modules';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -33,7 +32,6 @@ export const pluginTypedCSSModules = (
   name: PLUGIN_TYPED_CSS_MODULES_NAME,
 
   setup(api) {
-    const moduleMatchers: ((filename: string) => boolean)[] = [];
     if (options.clean) {
       const outputPaths = new Set<string>();
       api.modifyRspackConfig((config) => {
@@ -46,8 +44,6 @@ export const pluginTypedCSSModules = (
             const cleaner = createDeclarationCleaner({
               root: api.context.rootPath,
               outputPaths: [api.context.distPath, ...outputPaths],
-              isModule: (filename) =>
-                moduleMatchers.some((matches) => matches(filename)),
             });
             compiler.hooks.beforeRun.tapPromise(
               PLUGIN_TYPED_CSS_MODULES_NAME,
@@ -113,36 +109,6 @@ export const pluginTypedCSSModules = (
                 cssLoaderOptions.modules.auto === false)
             ) {
               continue;
-            }
-
-            if (options.clean) {
-              const parent = chain.module.rule(ruleId);
-              const conditions = [parent, rule].map((item) => ({
-                test: item.get('test'),
-                include: item.include.values().length
-                  ? item.include.values()
-                  : undefined,
-                exclude: item.exclude.values().length
-                  ? item.exclude.values()
-                  : undefined,
-              }));
-              const modules = cssLoaderOptions.modules;
-              moduleMatchers.push(
-                (resourcePath) =>
-                  conditions.every(
-                    ({ test, include, exclude }) =>
-                      matchesCondition(resourcePath, test) &&
-                      matchesCondition(resourcePath, include) &&
-                      (exclude === undefined ||
-                        !matchesCondition(resourcePath, exclude)),
-                  ) &&
-                  isCSSModules({
-                    resourcePath,
-                    resourceQuery: '',
-                    resourceFragment: '',
-                    modules,
-                  }),
-              );
             }
 
             rule
