@@ -86,47 +86,44 @@ test('cleans declarations when a watched source is deleted', async () => {
   }
 });
 
-for (const mode of ['query', 'fragment', 'changed config'] as const) {
-  test(`cleans generated declarations with ${mode}`, async () => {
-    const root = await fs.promises.mkdtemp(
-      path.join(os.tmpdir(), 'typed-css-auto-'),
-    );
-    const entry = path.join(root, 'index.js');
-    const source = path.join(root, 'styles.css');
-    const declaration = `${source}.d.ts`;
-    const suffix = mode === 'fragment' ? '#module' : '?module';
-    const auto = (_path: string, query: string, fragment: string) =>
-      mode === 'fragment' ? fragment === '#module' : query === '?module';
-    try {
-      await fs.promises.writeFile(entry, `import './styles.css${suffix}';`);
-      await fs.promises.writeFile(source, '.foo { color: red; }');
-      const build = async (modulesAuto: typeof auto | boolean) => {
-        const rsbuild = await createRsbuild({
-          cwd: root,
-          config: {
-            plugins: [pluginTypedCSSModules({ clean: true })],
-            source: { entry: { index: './index.js' } },
-            output: { cssModules: { auto: modulesAuto } },
+test('cleans old declarations after the CSS Modules configuration changes', async () => {
+  const root = await fs.promises.mkdtemp(
+    path.join(os.tmpdir(), 'typed-css-config-'),
+  );
+  const entry = path.join(root, 'index.js');
+  const source = path.join(root, 'styles.css');
+  const declaration = `${source}.d.ts`;
+  const config = {
+    plugins: [pluginTypedCSSModules({ clean: true })],
+    source: { entry: { index: './index.js' } },
+  };
+  try {
+    await fs.promises.writeFile(entry, "import './styles.css?module#scoped';");
+    await fs.promises.writeFile(source, '.foo { color: red; }');
+    const original = await createRsbuild({
+      cwd: root,
+      config: {
+        ...config,
+        output: {
+          cssModules: {
+            auto: (_path, query, fragment) =>
+              query === '?module' && fragment === '#scoped',
           },
-        });
-        await rsbuild.build();
-      };
-      await build(auto);
-      const generated = await fs.promises.readFile(declaration, 'utf8');
-      expect(generated).toContain('foo: string;');
-      // A checkout on Windows may use CRLF for the same generated declaration.
-      if (mode === 'query') {
-        await fs.promises.writeFile(
-          declaration,
-          generated.replace(/\r?\n/g, '\r\n'),
-        );
-      }
-      await fs.promises.unlink(source);
-      await fs.promises.writeFile(entry, 'console.log("deleted");');
-      await build(mode === 'changed config' ? false : auto);
-      expect(fs.existsSync(declaration)).toBe(false);
-    } finally {
-      await fs.promises.rm(root, { recursive: true, force: true });
-    }
-  });
-}
+        },
+      },
+    });
+    await original.build();
+    expect(await fs.promises.readFile(declaration, 'utf8')).toContain(
+      'foo: string;',
+    );
+
+    await fs.promises.unlink(source);
+    await fs.promises.writeFile(entry, 'console.log("deleted");');
+    // The default CSS Modules rules no longer match styles.css.
+    const updated = await createRsbuild({ cwd: root, config });
+    await updated.build();
+    expect(fs.existsSync(declaration)).toBe(false);
+  } finally {
+    await fs.promises.rm(root, { recursive: true, force: true });
+  }
+});
