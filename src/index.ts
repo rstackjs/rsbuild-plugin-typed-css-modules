@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { CSSLoaderOptions, RsbuildPlugin } from '@rsbuild/core';
+import { createDeclarationCleaner } from './clean.js';
 
 export const PLUGIN_TYPED_CSS_MODULES_NAME = 'rsbuild:typed-css-modules';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -9,6 +10,12 @@ const loaderFilename = import.meta.url.endsWith('.ts')
   : './loader.cjs';
 
 export type PluginOptions = {
+  /**
+   * Remove generated declarations whose source files no longer exist before
+   * builds and when watched source files are deleted.
+   * @default false
+   */
+  clean?: boolean;
   /**
    * When enabled, the generated type definition will include an index signature (`[key: string]: string`).
    * This allows you to reference any class name without TypeScript errors, while still keeping autocomplete
@@ -25,6 +32,37 @@ export const pluginTypedCSSModules = (
   name: PLUGIN_TYPED_CSS_MODULES_NAME,
 
   setup(api) {
+    if (options.clean) {
+      api.onAfterCreateCompiler(({ compiler }) => {
+        const compilers =
+          'compilers' in compiler ? compiler.compilers : [compiler];
+        // Collect every environment's output after tools.rspack has been applied.
+        const outputPaths = compilers.map((item) => item.outputPath);
+        for (const item of compilers) {
+          const cleaner = createDeclarationCleaner({
+            root: api.context.rootPath,
+            outputPaths: [api.context.distPath, ...outputPaths],
+          });
+          item.hooks.beforeRun.tapPromise(
+            PLUGIN_TYPED_CSS_MODULES_NAME,
+            cleaner.scan,
+          );
+          let initialWatch = true;
+          item.hooks.watchRun.tapPromise(
+            PLUGIN_TYPED_CSS_MODULES_NAME,
+            async () => {
+              if (initialWatch) {
+                await cleaner.scan();
+                initialWatch = false;
+              } else {
+                await cleaner.removeDeleted(item.removedFiles ?? []);
+              }
+            },
+          );
+        }
+      });
+    }
+
     api.modifyBundlerChain({
       order: 'post',
       handler: async (chain, { target, CHAIN_ID }) => {
