@@ -87,12 +87,17 @@ export function createDeclarationCleaner({ root, outputPaths }: CleanOptions) {
       }
       throw error;
     }
+    const entryNames = new Set(entries.map((entry) => entry.name));
     for (const entry of entries) {
       const filename = path.join(directory, entry.name);
       if (entry.isDirectory()) {
         await visit(filename);
       } else if (entry.isFile() && filename.endsWith('.d.ts')) {
-        await remove(filename.slice(0, -'.d.ts'.length));
+        const sourceName = entry.name.slice(0, -'.d.ts'.length);
+        // The directory listing already tells us which source files exist.
+        if (!entryNames.has(sourceName)) {
+          await remove(path.join(directory, sourceName));
+        }
       }
     }
   }
