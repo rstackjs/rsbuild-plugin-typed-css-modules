@@ -46,7 +46,8 @@ for (const clean of [undefined, true]) {
       await fs.promises.copyFile(`${source}.d.ts`, outputDeclaration);
 
       await fs.promises.unlink(source);
-      await fs.promises.writeFile(entry, "import './keep.module.css';");
+      // Do not regenerate the declaration if cleanup incorrectly removes it.
+      await fs.promises.writeFile(entry, 'console.log("updated");');
       await rsbuild.build();
       expect(fs.readFileSync(handwritten, 'utf8')).toBe(
         'export const manual: string;\n',
