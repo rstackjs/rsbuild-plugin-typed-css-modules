@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { DECLARATION_HEADER } from './constants.js';
 
-const STYLE_REGEX = /\.(css|scss|sass|less|styl|stylus)$/i;
+export const STYLE_REGEX = /\.(css|scss|sass|less|styl|stylus)$/i;
 const isMissing = (error: unknown) =>
   (error as NodeJS.ErrnoException).code === 'ENOENT';
 
