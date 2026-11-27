@@ -61,7 +61,7 @@ for (const clean of [undefined, true]) {
   });
 }
 
-test('cleans declarations when a watched source is deleted', async () => {
+async function testWatchCleanup(ignoreCss: boolean) {
   const root = await fs.promises.mkdtemp(
     path.join(os.tmpdir(), 'typed-css-watch-'),
   );
@@ -74,6 +74,9 @@ test('cleans declarations when a watched source is deleted', async () => {
     const rsbuild = await createRsbuild({
       cwd: root,
       config: {
+        tools: {
+          rspack: { watchOptions: { ignored: ignoreCss ? /\.css$/ : [] } },
+        },
         plugins: [pluginTypedCSSModules({ clean: true })],
         source: { entry: { index: './index.js' } },
       },
@@ -84,18 +87,22 @@ test('cleans declarations when a watched source is deleted', async () => {
     });
     ({ close } = await rsbuild.build({ watch: true }));
     await expect.poll(() => builds).toBeGreaterThan(0);
-    const initialBuilds = builds;
     expect(fs.existsSync(`${source}.d.ts`)).toBe(true);
 
     await fs.promises.unlink(source);
     await fs.promises.writeFile(entry, 'console.log("deleted");');
-    await expect.poll(() => builds).toBeGreaterThan(initialBuilds);
-    expect(fs.existsSync(`${source}.d.ts`)).toBe(false);
+    await expect.poll(() => fs.existsSync(`${source}.d.ts`)).toBe(false);
   } finally {
     await close?.();
     await fs.promises.rm(root, { recursive: true, force: true });
   }
-});
+}
+
+test('cleans declarations when a watched source is deleted', () =>
+  testWatchCleanup(false));
+
+test('cleans declarations when the watcher misses a deletion', () =>
+  testWatchCleanup(true));
 
 test('cleans old declarations after the CSS Modules configuration changes', async () => {
   const root = await fs.promises.mkdtemp(
