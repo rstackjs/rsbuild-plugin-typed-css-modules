@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { CSSLoaderOptions, RsbuildPlugin } from '@rsbuild/core';
-import { createDeclarationCleaner } from './clean.js';
+import { createDeclarationCleaner, STYLE_REGEX } from './clean.js';
 
 export const PLUGIN_TYPED_CSS_MODULES_NAME = 'rsbuild:typed-css-modules';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -57,6 +57,22 @@ export const pluginTypedCSSModules = (
               } else {
                 await cleaner.removeDeleted(item.removedFiles ?? []);
               }
+            },
+          );
+          let previousStyles = new Set<string>();
+          item.hooks.afterCompile.tapPromise(
+            PLUGIN_TYPED_CSS_MODULES_NAME,
+            async (compilation) => {
+              if (!item.watchMode) return;
+              // A deleted stylesheet can leave the graph without a watch removal event.
+              const styles = new Set<string>();
+              for (const file of compilation.fileDependencies) {
+                if (STYLE_REGEX.test(file)) styles.add(file);
+              }
+              await cleaner.removeDeleted(
+                [...previousStyles].filter((file) => !styles.has(file)),
+              );
+              previousStyles = styles;
             },
           );
         }
